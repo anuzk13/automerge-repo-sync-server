@@ -2,3 +2,7 @@
 /*.amrg
 
 automerge-repo-data
+
+certs/
+
+.DS_Store

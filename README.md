@@ -39,6 +39,10 @@ docker stop syncserver
 docker rm syncserver
 ```
 
+## Running on HTTPS
+
+- Generate self-signed certificates and add to ./certs
+
 ## Contributors
 
 Originally written by @pvh.

@@ -1,11 +1,17 @@
 // @ts-check
 import fs from "fs"
+import https from "https"
+import path from "path"
+import { fileURLToPath } from "url"
 import express from "express"
 import { WebSocketServer } from "ws"
 import { Repo } from "@automerge/automerge-repo"
 import { WebSocketServerAdapter } from "@automerge/automerge-repo-network-websocket"
 import { NodeFSStorageAdapter } from "@automerge/automerge-repo-storage-nodefs"
+
 import os from "os"
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export class Server {
   /** @type WebSocketServer */
@@ -53,11 +59,26 @@ export class Server {
       res.send(`👍 @automerge/automerge-repo-sync-server is running`)
     })
 
-    this.#server = app.listen(PORT, () => {
-      console.log(`Listening on port ${PORT}`)
-      this.#isReady = true
-      this.#readyResolvers.forEach((resolve) => resolve(true))
-    })
+    const certsDir = path.resolve(__dirname, "..", "certs")
+    const keyPath = path.join(certsDir, "key.pem")
+    const certPath = path.join(certsDir, "cert.pem")
+
+    if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+      const httpsServer = https.createServer(
+        { key: fs.readFileSync(keyPath), cert: fs.readFileSync(certPath) },
+        app
+      )
+      this.#server = httpsServer.listen(PORT, () => {
+        this.#isReady = true
+        this.#readyResolvers.forEach((resolve) => resolve(true))
+      })
+    } else {
+      this.#server = app.listen(PORT, () => {
+        console.log(`Listening on ws://localhost:${PORT}. No TLS certs found in ${certsDir}`)
+        this.#isReady = true
+        this.#readyResolvers.forEach((resolve) => resolve(true))
+      })
+    }
 
     this.#repo.storageId().then((storageId) => {
       console.log(`Storage ID: ${storageId}`)
